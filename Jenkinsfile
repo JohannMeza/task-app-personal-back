@@ -5,6 +5,8 @@ pipeline {
     REGISTRY_URL = 'localhost:4566'
     IMAGE_NAME = 'auth-service'
     IMAGE_TAG = 'latest'
+    PULUMI_CONFIG_STRATEGY = 'override'
+    CONFIG_STRATEGY = 'override'
   }
 
   stages {
