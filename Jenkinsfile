@@ -28,20 +28,21 @@ pipeline {
       }
     }
 
-    stage('3. Build Docker Image') {
+    stage('3. Build Docker Images') {
       steps {
-        echo 'Construyendo la imagen Docker desde la raiz del proyecto...'
-        bat "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+        echo 'Construyendo las imágenes Docker...'
+        bat "docker build -t auth-service:latest -f Dockerfile ."
+        bat "docker build -t task-service:latest -f Dockerfile.task ."
       }
     }
 
     stage('4. Tag & Push to Localstack ECR') {
       steps {
-        echo 'Asociando tag y subiendo la imagen a Localstack ECR...'
-        // Taggear la imagen
-        bat "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
-        // Subir al registro (En Localstack no hace falta hacer "docker login")
-        bat "docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
+        echo 'Asociando tags y subiendo las imágenes a Localstack ECR...'
+        bat "docker tag auth-service:latest ${REGISTRY_URL}/auth-service:latest"
+        bat "docker push ${REGISTRY_URL}/auth-service:latest"
+        bat "docker tag task-service:latest ${REGISTRY_URL}/task-service:latest"
+        bat "docker push ${REGISTRY_URL}/task-service:latest"
       }
     }
   }
