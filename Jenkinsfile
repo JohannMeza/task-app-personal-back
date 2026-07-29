@@ -15,29 +15,29 @@ pipeline {
       }
     }
 
-    stage('2. Build Docker Image') {
+    stage('2. Pulumi Deploy') {
+      steps {
+        echo 'Desplegando la infraestructura localmente con Pulumi (para crear repositorios ECR)...'
+        // Ejecuta la actualizacion de infraestructura de forma no interactiva
+        // Nota: Asegurate de tener la passphrase del stack configurado en el Agente de Jenkins
+        bat "pulumilocal up --yes --skip-preview"
+      }
+    }
+
+    stage('3. Build Docker Image') {
       steps {
         echo 'Construyendo la imagen Docker desde la raiz del proyecto...'
         bat "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
       }
     }
 
-    stage('3. Tag & Push to Localstack ECR') {
+    stage('4. Tag & Push to Localstack ECR') {
       steps {
         echo 'Asociando tag y subiendo la imagen a Localstack ECR...'
         // Taggear la imagen
         bat "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
-        // Subir el registro (En Localstack no hace hacer "docker login")
+        // Subir al registro (En Localstack no hace falta hacer "docker login")
         bat "docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
-      }
-    }
-
-    stage('4. Pulumi Deploy') {
-      steps {
-        echo 'Desplegando la infraestructura localmente con Pulumi...'
-        // Ejecuta la actualizacion de infraestructura de forma no interactiva
-        // Nota: Asegurate de tener la passphrase del stack configurado en el Agente de Jenkins
-        bat "pulumilocal up --yes --skip-preview"
       }
     }
   }
