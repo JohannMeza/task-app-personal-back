@@ -18,8 +18,8 @@ pipeline {
     stage('2. Pulumi Deploy') {
       steps {
         echo 'Desplegando la infraestructura localmente con Pulumi (para crear repositorios ECR)...'
-        // Selecciona el stack dev y ejecuta la actualizacion de infraestructura
-        bat "cd infra && pulumilocal stack select dev && pulumilocal up --yes --skip-preview"
+        // Selecciona el stack dev usando el comando nativo de pulumi para evitar prompts interactivos
+        bat "cd infra && pulumi stack select dev && pulumilocal up --yes --skip-preview"
       }
     }
 
