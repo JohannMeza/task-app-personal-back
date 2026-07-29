@@ -1,0 +1,44 @@
+pipeline {
+  agent any
+  environment {
+    // En produccion aqui iria tu URI de AWS ECR real
+    REGISTRY_URL = 'localhost:4566'
+    IMAGE_NAME = 'auth-service'
+    IMAGE_TAG = 'latest'
+  }
+
+  stages {
+    stage('1. Checkout Code') {
+      steps {
+        // Descarga el codigo fuente del repositorio
+        checkout scm
+      }
+    }
+
+    stage('2. Build Docker Image') {
+      steps {
+        echo 'Construyendo la imagen Docker desde la raiz del proyecto...'
+        sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+      }
+    }
+
+    stage('3. Tag & Push to Localstack ECR') {
+      steps {
+        echo 'Asociando tag y subiendo la imagen a Localstack ECR...'
+        // Taggear la imagen
+        sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
+        // Subir el registro (En Localstack no hace hacer "docker login")
+        sh "docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
+      }
+    }
+
+    stage('4. Pulumi Deploy') {
+      steps {
+        echo 'Desplegando la infraestructura localmente con Pulumi...'
+        // Ejecuta la actualizacion de infraestructura de forma no interactiva
+        // Nota: Asegurate de tener la passphrase del stack configurado en el Agente de Jenkins
+        sh "pulumilocal up --yes --skip-preview"
+      }
+    }
+  }
+}

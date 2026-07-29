@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/task-app-personal/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/task-app-personal/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/task-app-personal",
+  "projects": {
+    "auth-service": {
+      "type": "application",
+      "root": "apps/auth-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/auth-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/auth-service/tsconfig.app.json"
+      }
+    },
+    "list-service": {
+      "type": "application",
+      "root": "apps/list-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/list-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/list-service/tsconfig.app.json"
+      }
+    },
+    "register-service": {
+      "type": "application",
+      "root": "apps/register-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/register-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/register-service/tsconfig.app.json"
+      }
+    },
+    "task-app-personal": {
+      "type": "application",
+      "root": "apps/task-app-personal",
+      "entryFile": "main",
+      "sourceRoot": "apps/task-app-personal/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/task-app-personal/tsconfig.app.json"
+      }
+    },
+    "task-service": {
+      "type": "application",
+      "root": "apps/task-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/task-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/task-service/tsconfig.app.json"
+      }
+    },
+    "update-service": {
+      "type": "application",
+      "root": "apps/update-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/update-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/update-service/tsconfig.app.json"
+      }
+    }
+  }
+}
