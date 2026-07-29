@@ -9,6 +9,7 @@ pipeline {
     CONFIG_STRATEGY = 'overwrite'
     PULUMI_NON_INTERACTIVE = '1'
     NON_INTERACTIVE = '1'
+    PULUMI_CONFIG_PASSPHRASE = ''
   }
 
   stages {
