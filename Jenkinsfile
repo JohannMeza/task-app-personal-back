@@ -2,7 +2,7 @@ pipeline {
   agent any
   environment {
     // En produccion aqui iria tu URI de AWS ECR real
-    REGISTRY_URL = 'localhost:4510'
+    REGISTRY_URL = '000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4566'
     IMAGE_NAME = 'auth-service'
     IMAGE_TAG = 'latest'
     PULUMI_CONFIG_STRATEGY = 'overwrite'
