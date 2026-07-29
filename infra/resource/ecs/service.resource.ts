@@ -17,15 +17,10 @@ export function createService(args: ServiceArgs): aws.ecs.Service {
       cluster: args.clusterArn,
       taskDefinition: args.taskDefinitionArn,
       desiredCount: args.desiredCount,
-      launchType: 'FARGATE',
+      launchType: 'EC2',
       deploymentMinimumHealthyPercent: 50,
       deploymentMaximumPercent: 200,
       enableExecuteCommand: true,
-      networkConfiguration: {
-        assignPublicIp: true,
-        subnets: ['subnet-12345678'],
-        securityGroups: ['sg-12345678'],
-      },
     },
     {
       provider,
