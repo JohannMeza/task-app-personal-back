@@ -25,12 +25,14 @@ const authTaskDefinition = createTaskDefinition({
   image: pulumi.interpolate`${repositories.auth.repositoryUrl}:latest`,
   executionRoleArn: executionRole.arn,
   logGroupName: authLogs.name,
+
   containerPort: 3000,
   cpu: '256',
   memory: '512',
   environment: {
     NODE_ENV: 'development',
     AWS_REGION: 'us-east-1',
+    port: '3000',
   },
 });
 const authService = createService({
