@@ -52,8 +52,8 @@ export function createTaskDefinition(
     `${args.serviceName}-task`,
     {
       family: args.serviceName,
-      networkMode: 'bridge',
-      requiresCompatibilities: ['EC2'],
+      networkMode: 'awsvpc',
+      requiresCompatibilities: ['FARGATE'],
       cpu: args.cpu,
       memory: args.memory,
       executionRoleArn: args.executionRoleArn,
