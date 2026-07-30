@@ -1,6 +1,6 @@
-secrets:cognitoClientId
 secrets:cognitoRegion
 secrets:awsEndpoint
 secrets:awsAccessKeyId
 secrets:awsSecretAccessKey
 secrets:vaultAddr
+dynamodb:tableName

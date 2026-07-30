@@ -10,11 +10,7 @@ export default class Constants {
     return this.configs[namespace];
   }
 
-  // Getters para las variables inyectadas desde Vault a Pulumi
-  static get cognitoClientId(): pulumi.Output<string> {
-    return this.getConfig('secrets').requireSecret('cognitoClientId');
-  }
-
+  // Getters para secrets
   static get cognitoRegion(): string {
     return this.getConfig('secrets').require('cognitoRegion');
   }
@@ -33,5 +29,10 @@ export default class Constants {
 
   static get vaultAddr(): string {
     return this.getConfig('secrets').require('vaultAddr');
+  }
+
+  // Getters para dynamodb
+  static get dynamoTableName(): string {
+    return this.getConfig('dynamodb').require('tableName');
   }
 }

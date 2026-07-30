@@ -55,26 +55,21 @@ pipeline {
             \$secrets = @{}
         }
         
-        # 3. Diccionario para mapear las claves de pulumi_params.txt a las guardadas en Vault
-        \$mappings = @{
-            "secrets:cognitoClientId"     = "COGNITO_CLIENT_ID"
-            "secrets:cognitoRegion"       = "COGNITO_REGION"
-            "secrets:awsEndpoint"         = "AWS_ENDPOINT"
-            "secrets:awsAccessKeyId"      = "AWS_ACCESS_KEY_ID"
-            "secrets:awsSecretAccessKey"  = "AWS_SECRET_ACCESS_KEY"
-            "secrets:vaultAddr"           = "VAULT_ADDR"
-        }
-        
-        # 4. Leer pulumi_params.txt e inyectar en la configuración de la pila de Pulumi
+        # 3. Leer pulumi_params.txt e inyectar automáticamente en Pulumi sin mapeos fijos
         Get-Content "..\\config\\pulumi_params.txt" | ForEach-Object {
             \$param = \$_.Trim()
-            if (\$param -and \$mappings.ContainsKey(\$param)) {
-                \$vaultKey = \$mappings[\$param]
-                \$val = \$secrets.\$vaultKey
+            if (\$param) {
+                # Resolver clave en Vault probando automáticamente: exacto, sin namespace y en MAYUSCULAS_CON_GUION
+                \$keyNoNamespace = if (\$param.Contains(":")) { \$param.Split(":")[1] } else { \$param }
+                \$keySnake = ([regex]::Replace(\$keyNoNamespace, '(?<=[a-z])([A-Z])', '_\$1')).ToUpper()
+                
+                \$val = \$secrets.\$param
+                if (-not \$val) { \$val = \$secrets.\$keyNoNamespace }
+                if (-not \$val) { \$val = \$secrets.\$keySnake }
                 
                 if (\$val) {
-                    # Si es un secreto sensible, lo encriptamos
-                    \$isSecret = \$param.Contains("ClientId") -or \$param.Contains("AccessKey")
+                    # Si es un secreto sensible, lo encriptamos con --secret
+                    \$isSecret = \$param.Contains("ClientId") -or \$param.Contains("AccessKey") -or \$param.Contains("secret") -or \$param.Contains("Password")
                     if (\$isSecret) {
                         pulumilocal config set --secret \$param \$val
                         Write-Host "Inyectado secreto encriptado: \$param"
