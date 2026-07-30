@@ -59,17 +59,19 @@ pipeline {
         Get-Content "..\\config\\pulumi_params.txt" | ForEach-Object {
             \$param = \$_.Trim()
             if (\$param) {
-                # Resolver clave en Vault probando automáticamente: exacto, sin namespace y en MAYUSCULAS_CON_GUION
+                # Resolver clave en Vault probando automáticamente: exacto, sin namespace, MAYUSCULAS_SIN_NS y MAYUSCULAS_CON_NS
                 \$keyNoNamespace = if (\$param.Contains(":")) { \$param.Split(":")[1] } else { \$param }
                 \$keySnake = ([regex]::Replace(\$keyNoNamespace, '(?<=[a-z])([A-Z])', '_\$1')).ToUpper()
+                \$fullKeySnake = ([regex]::Replace(\$param.Replace(":", "_"), '(?<=[a-z])([A-Z])', '_\$1')).ToUpper()
                 
                 \$val = \$secrets.\$param
                 if (-not \$val) { \$val = \$secrets.\$keyNoNamespace }
                 if (-not \$val) { \$val = \$secrets.\$keySnake }
+                if (-not \$val) { \$val = \$secrets.\$fullKeySnake }
                 
                 if (\$val) {
                     # Si es un secreto sensible, lo encriptamos con --secret
-                    \$isSecret = \$param.Contains("ClientId") -or \$param.Contains("AccessKey") -or \$param.Contains("secret") -or \$param.Contains("Password")
+                    \$isSecret = \$param.Contains("ClientId") -or \$param.Contains("AccessKey") -or \$param.Contains("Secret") -or \$param.Contains("Password")
                     if (\$isSecret) {
                         pulumilocal config set --secret \$param \$val
                         Write-Host "Inyectado secreto encriptado: \$param"
