@@ -117,8 +117,8 @@ pipeline {
     stage('5. Restart ECS Services') {
       steps {
         echo 'Forzando el redespliegue en ECS para tomar la nueva versión de las imágenes...'
-        bat "aws --endpoint-url=http://localhost:4566 ecs update-service --cluster task-app-personal-${ENVIRONMENT} --service auth-service --force-new-deployment"
-        bat "aws --endpoint-url=http://localhost:4566 ecs update-service --cluster task-app-personal-${ENVIRONMENT} --service task-service --force-new-deployment"
+        bat "aws --endpoint-url=http://localhost:4566 --cli-read-timeout 120 ecs update-service --cluster task-app-personal-${ENVIRONMENT} --service auth-service --force-new-deployment"
+        bat "aws --endpoint-url=http://localhost:4566 --cli-read-timeout 120 ecs update-service --cluster task-app-personal-${ENVIRONMENT} --service task-service --force-new-deployment"
       }
     }
   }
