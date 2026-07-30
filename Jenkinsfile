@@ -2,15 +2,17 @@ pipeline {
   agent any
   environment {
     // 1. Detecta la rama del push (eliminando el prefijo "origin/" si existiera)
-    BRANCH = "${env.BRANCH_NAME ?: (env.GIT_BRANCH ? env.GIT_BRANCH.replace('origin/', '') : 'dev')}"
+    BRANCH = "${env.BRANCH_NAME ?: (env.GIT_BRANCH ? env.GIT_BRANCH.replace('origin/', '') : 'develop')}"
 
-    // 2. Traduce la rama al entorno correspondiente para vault
-    NODE_ENV = "${(BRANCH == 'develop' ? 'dev' : BRANCH == 'release' ? 'stg' : BRANCH == 'production' ? 'prd' : 'dev')}"
+    // 2. Traduce la rama al entorno (dev, stg, prd) para usar en Vault y Pulumi
+    ENVIRONMENT = "${(BRANCH == 'develop' || BRANCH == 'dev') ? 'dev' : BRANCH == 'release' ? 'stg' : BRANCH == 'production' ? 'prd' : 'dev'}"
+    NODE_ENV = "${ENVIRONMENT}"
 
-    // En produccion aqui iria tu URI de AWS ECR real
+    // Configuración general del registro
     REGISTRY_URL = '000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4566'
     IMAGE_NAME = 'auth-service'
     IMAGE_TAG = 'latest'
+    
     PULUMI_CONFIG_STRATEGY = 'overwrite'
     CONFIG_STRATEGY = 'overwrite'
     PULUMI_NON_INTERACTIVE = '1'
@@ -21,16 +23,79 @@ pipeline {
   stages {
     stage('1. Checkout Code') {
       steps {
-        // Descarga el codigo fuente del repositorio
         checkout scm
       }
     }
 
     stage('2. Pulumi Deploy') {
       steps {
-        echo 'Desplegando la infraestructura localmente con Pulumi (para crear repositorios ECR)...'
-        // Instala dependencias del SDK de Pulumi con npm y ejecuta el deploy
-        bat "cd infra && npm install && pulumi install && pulumi stack select dev && pulumilocal up --yes --skip-preview"
+        echo "Calculando entorno y recuperando secretos de Vault para stack: ${ENVIRONMENT}..."
+        
+        powershell """
+        \$env:PULUMI_CONFIG_PASSPHRASE_FILE = "passphrase.txt"
+        cd infra
+        
+        # 1. Seleccionar o inicializar el stack de Pulumi de forma dinámica
+        pulumilocal stack select ${ENVIRONMENT} 2>\$null
+        if (\$LASTEXITCODE -ne 0) {
+            pulumilocal stack init ${ENVIRONMENT}
+        }
+        
+        # 2. Consultar los secretos del entorno específico en Vault
+        \$vaultUrl = "http://localhost:8200/v1/task-app-personal/data/${ENVIRONMENT}/pulumi"
+        \$vaultToken = "my-root-token"
+        
+        Write-Host "Consultando secretos en Vault: \$vaultUrl"
+        try {
+            \$response = Invoke-RestMethod -Uri \$vaultUrl -Headers @{ "X-Vault-Token" = \$vaultToken } -Method Get
+            \$secrets = \$response.data.data
+            Write-Host "Secretos obtenidos exitosamente de Vault."
+        } catch {
+            Write-Warning "No se pudo conectar a Vault: \$_ . Escribiendo con fallbacks locales..."
+            \$secrets = @{}
+        }
+        
+        # 3. Diccionario para mapear las claves de pulumi_params.txt a las guardadas en Vault
+        \$mappings = @{
+            "secrets:cognitoClientId"     = "COGNITO_CLIENT_ID"
+            "secrets:cognitoRegion"       = "COGNITO_REGION"
+            "secrets:awsEndpoint"         = "AWS_ENDPOINT"
+            "secrets:awsAccessKeyId"      = "AWS_ACCESS_KEY_ID"
+            "secrets:awsSecretAccessKey"  = "AWS_SECRET_ACCESS_KEY"
+            "secrets:vaultAddr"           = "VAULT_ADDR"
+        }
+        
+        # 4. Leer pulumi_params.txt e inyectar en la configuración de la pila de Pulumi
+        Get-Content "..\\config\\pulumi_params.txt" | ForEach-Object {
+            \$param = \$_.Trim()
+            if (\$param -and \$mappings.ContainsKey(\$param)) {
+                \$vaultKey = \$mappings[\$param]
+                \$val = \$secrets[\$vaultKey]
+                
+                if (\$val) {
+                    # Si es un secreto sensible, lo encriptamos
+                    \$isSecret = \$param.Contains("ClientId") -or \$param.Contains("AccessKey")
+                    if (\$isSecret) {
+                        pulumilocal config set --secret \$param \$val
+                        Write-Host "Inyectado secreto encriptado: \$param"
+                    } else {
+                        pulumilocal config set \$param \$val
+                        Write-Host "Inyectada configuración: \$param"
+                    }
+                } else {
+                    # Configuración por defecto (fallback) si falta algo en Vault
+                    if (\$param -eq "secrets:vaultAddr") {
+                        pulumilocal config set \$param "http://localhost.localstack.cloud:8200"
+                        Write-Host "Inyectado fallback para: \$param"
+                    }
+                }
+            }
+        }
+        
+        # 5. Ejecutar instalación de Pulumi y desplegar los recursos
+        npm install
+        pulumilocal up --yes --skip-preview
+        """
       }
     }
 
@@ -55,8 +120,8 @@ pipeline {
     stage('5. Restart ECS Services') {
       steps {
         echo 'Forzando el redespliegue en ECS para tomar la nueva versión de las imágenes...'
-        bat "aws --endpoint-url=http://localhost:4566 ecs update-service --cluster task-app-personal-dev --service auth-service --force-new-deployment"
-        bat "aws --endpoint-url=http://localhost:4566 ecs update-service --cluster task-app-personal-dev --service task-service --force-new-deployment"
+        bat "aws --endpoint-url=http://localhost:4566 ecs update-service --cluster task-app-personal-${ENVIRONMENT} --service auth-service --force-new-deployment"
+        bat "aws --endpoint-url=http://localhost:4566 ecs update-service --cluster task-app-personal-${ENVIRONMENT} --service task-service --force-new-deployment"
       }
     }
   }

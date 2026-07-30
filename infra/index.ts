@@ -1,7 +1,6 @@
 import * as aws from '@pulumi/aws';
 import * as pulumi from '@pulumi/pulumi';
 import { createConfigurationTable } from './resource/dynamodb';
-import { clientId } from './resource/cognito';
 import { createRepostories } from './resource/ecr/repositories.resource';
 import { createExecutionRole } from './resource/iam/ecs-execution-role.resource';
 import { attackExecutionPolicy } from './resource/iam/ecs.execution-policy.resource';
@@ -10,7 +9,13 @@ import { createCluster } from './resource/ecs/cluster.resource';
 import { createService } from './resource/ecs/service.resource';
 import { createTaskDefinition } from './resource/ecs/task-definition.resource';
 
-// Create an AWS resource (S3 Bucket)
+// Importa los componentes de configuración con patrón Auna
+import Constants from './constants';
+import ConfigService from './config';
+
+// Instancia el servicio de mapeo
+const configSvc = new ConfigService(Constants);
+
 const bucket = new aws.s3.Bucket('my-bucket');
 const table = createConfigurationTable();
 const repositories = createRepostories();
@@ -20,27 +25,19 @@ const authLogs = createLogGroup('auth-service');
 const dashboardLogs = createLogGroup('dashboard-service');
 const taskLogs = createLogGroup('task-service');
 const cluster = createCluster();
+
+// Definición del auth-service usando el mapeador
 const authTaskDefinition = createTaskDefinition({
   serviceName: 'auth-service',
   image: pulumi.interpolate`${repositories.auth.repositoryUrl}:latest`,
   executionRoleArn: executionRole.arn,
   logGroupName: authLogs.name,
-
   containerPort: 3000,
   cpu: '256',
   memory: '512',
-  environment: {
-    NODE_ENV: process.env.NODE_ENV || 'dev',
-    AWS_REGION: 'us-east-1',
-    port: '3000',
-    COGNITO_CLIENT_ID: clientId,
-    COGNITO_REGION: 'us-east-1',
-    AWS_ENDPOINT: 'http://localhost.localstack.cloud:4566',
-    AWS_ACCESS_KEY_ID: 'test',
-    AWS_SECRET_ACCESS_KEY: 'test',
-    VAULT_ADDR: 'http://localhost.localstack.cloud:8200',
-  },
+  environment: configSvc.getContainerEnvironment('3000'),
 });
+
 const authService = createService({
   serviceName: 'auth-service',
   clusterArn: cluster.arn,
@@ -48,6 +45,7 @@ const authService = createService({
   desiredCount: 1,
 });
 
+// Definición del task-service usando el mapeador
 const taskTaskDefinition = createTaskDefinition({
   serviceName: 'task-service',
   image: pulumi.interpolate`${repositories.task.repositoryUrl}:latest`,
@@ -56,18 +54,9 @@ const taskTaskDefinition = createTaskDefinition({
   containerPort: 3001,
   cpu: '256',
   memory: '512',
-  environment: {
-    NODE_ENV: process.env.NODE_ENV || 'dev',
-    AWS_REGION: 'us-east-1',
-    port: '3001',
-    COGNITO_CLIENT_ID: clientId,
-    COGNITO_REGION: 'us-east-1',
-    AWS_ENDPOINT: 'http://localhost.localstack.cloud:4566',
-    AWS_ACCESS_KEY_ID: 'test',
-    AWS_SECRET_ACCESS_KEY: 'test',
-    VAULT_ADDR: 'http://localhost.localstack.cloud:8200',
-  },
+  environment: configSvc.getContainerEnvironment('3001'),
 });
+
 const taskService = createService({
   serviceName: 'task-service',
   clusterArn: cluster.arn,
@@ -75,8 +64,7 @@ const taskService = createService({
   desiredCount: 1,
 });
 
-// Export the name of the bucket
-
+// Exportaciones
 export const bucketName = bucket.id;
 export const tableName = table.name;
 export const authRepository = repositories.auth.repositoryUrl;
