@@ -12,7 +12,7 @@ export default class ConfigService {
   getContainerEnvironment(port: string): Record<string, pulumi.Input<string>> {
     return {
       NODE_ENV: process.env.NODE_ENV || 'dev',
-      AWS_REGION: 'us-east-1',
+      AWS_REGION: this.config.cognitoRegion,
       port: port,
       COGNITO_CLIENT_ID: cognitoClientIdResource,
       COGNITO_REGION: this.config.cognitoRegion,
