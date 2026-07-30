@@ -30,7 +30,7 @@ const authTaskDefinition = createTaskDefinition({
   cpu: '256',
   memory: '512',
   environment: {
-    NODE_ENV: 'development',
+    NODE_ENV: process.env.NODE_ENV || 'dev',
     AWS_REGION: 'us-east-1',
     port: '3000',
     COGNITO_CLIENT_ID: clientId,
@@ -38,6 +38,7 @@ const authTaskDefinition = createTaskDefinition({
     AWS_ENDPOINT: 'http://localhost.localstack.cloud:4566',
     AWS_ACCESS_KEY_ID: 'test',
     AWS_SECRET_ACCESS_KEY: 'test',
+    VAULT_ADDR: 'http://localhost.localstack.cloud:8200',
   },
 });
 const authService = createService({
@@ -56,7 +57,7 @@ const taskTaskDefinition = createTaskDefinition({
   cpu: '256',
   memory: '512',
   environment: {
-    NODE_ENV: 'development',
+    NODE_ENV: process.env.NODE_ENV || 'dev',
     AWS_REGION: 'us-east-1',
     port: '3001',
     COGNITO_CLIENT_ID: clientId,
@@ -64,6 +65,7 @@ const taskTaskDefinition = createTaskDefinition({
     AWS_ENDPOINT: 'http://localhost.localstack.cloud:4566',
     AWS_ACCESS_KEY_ID: 'test',
     AWS_SECRET_ACCESS_KEY: 'test',
+    VAULT_ADDR: 'http://localhost.localstack.cloud:8200',
   },
 });
 const taskService = createService({

@@ -1,6 +1,12 @@
 pipeline {
   agent any
   environment {
+    // 1. Detecta la rama del push (eliminando el prefijo "origin/" si existiera)
+    BRANCH = "${env.BRANCH_NAME ?: (env.GIT_BRANCH ? env.GIT_BRANCH.replace('origin/', '') : 'dev')}"
+
+    // 2. Traduce la rama al entorno correspondiente para vault
+    NODE_ENV = "${(BRANCH == 'develop' ? 'dev' : BRANCH == 'release' ? 'stg' : BRANCH == 'production' ? 'prd' : 'dev')}"
+
     // En produccion aqui iria tu URI de AWS ECR real
     REGISTRY_URL = '000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4566'
     IMAGE_NAME = 'auth-service'
@@ -43,6 +49,14 @@ pipeline {
         bat "docker push ${REGISTRY_URL}/auth-service:latest"
         bat "docker tag task-service:latest ${REGISTRY_URL}/task-service:latest"
         bat "docker push ${REGISTRY_URL}/task-service:latest"
+      }
+    }
+
+    stage('5. Restart ECS Services') {
+      steps {
+        echo 'Forzando el redespliegue en ECS para tomar la nueva versión de las imágenes...'
+        bat "aws --endpoint-url=http://localhost:4566 ecs update-service --cluster task-app-personal-dev --service auth-service --force-new-deployment"
+        bat "aws --endpoint-url=http://localhost:4566 ecs update-service --cluster task-app-personal-dev --service task-service --force-new-deployment"
       }
     }
   }
