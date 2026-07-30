@@ -70,7 +70,7 @@ pipeline {
             \$param = \$_.Trim()
             if (\$param -and \$mappings.ContainsKey(\$param)) {
                 \$vaultKey = \$mappings[\$param]
-                \$val = \$secrets[\$vaultKey]
+                \$val = \$secrets.\$vaultKey
                 
                 if (\$val) {
                     # Si es un secreto sensible, lo encriptamos
